@@ -24,11 +24,7 @@ pip install typer rich
 ---
 
 ## Setup and Usage
-1. Clone this repository to your local machine:
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+1. Clone this repository to your local machine
 
 2. Ensure you have a `model.py` and `database.py` file in the same directory, implementing the `Todo` class and required database methods (`get_all_todos`, `insert_todo`, `delete_todo`, `complete_todo`, `update_todo`).
 
