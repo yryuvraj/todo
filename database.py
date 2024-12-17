@@ -8,69 +8,72 @@ c = conn.cursor()
 
 
 def create_table():
-    c.execute("""CREATE TABLE IF NOT EXISTS todos (
-            task text,
-            category text,
-            date_added text,
-            date_completed text,
-            status integer,
-            position integer
-            )""")
-
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS todos (
+            task TEXT,
+            category TEXT,
+            priority TEXT,
+            deadline TEXT,
+            date_added TEXT,
+            date_completed TEXT,
+            status INTEGER,
+            position INTEGER
+        )""")
 
 create_table()
 
 
 def insert_todo(todo: Todo):
-    c.execute('select count(*) FROM todos')
+    c.execute('SELECT COUNT(*) FROM todos')
     count = c.fetchone()[0]
     todo.position = count if count else 0
     with conn:
-        c.execute('INSERT INTO todos VALUES (:task, :category, :date_added, :date_completed, :status, :position)',
-        {'task': todo.task, 'category': todo.category, 'date_added': todo.date_added,
-         'date_completed': todo.date_completed, 'status': todo.status, 'position': todo.position })
+        c.execute('''INSERT INTO todos VALUES (:task, :category, :priority, :deadline, :date_added, :date_completed, :status, :position)''',
+                  {'task': todo.task, 'category': todo.category, 'priority': todo.priority, 'deadline': todo.deadline,
+                   'date_added': todo.date_added, 'date_completed': todo.date_completed, 'status': todo.status, 'position': todo.position})
 
 
 def get_all_todos() -> List[Todo]:
-    c.execute('select * from todos')
+    c.execute('SELECT * FROM todos')
     results = c.fetchall()
-    todos = []
-    for result in results:
-        todos.append(Todo(*result))
+    todos = [Todo(*result) for result in results]
     return todos
 
 
-def delete_todo(position):
-    c.execute('select count(*) from todos')
+def delete_todo(position: int):
+    c.execute('SELECT COUNT(*) FROM todos')
     count = c.fetchone()[0]
-
     with conn:
-        c.execute("DELETE from todos WHERE position=:position", {"position": position})
-        for pos in range(position+1, count):
-            change_position(pos, pos-1, False)
+        c.execute("DELETE FROM todos WHERE position=:position", {"position": position})
+        for pos in range(position + 1, count):
+            change_position(pos, pos - 1, False)
 
 
 def change_position(old_position: int, new_position: int, commit=True):
-    c.execute('UPDATE todos SET position = :position_new WHERE position = :position_old',
-                {'position_old': old_position, 'position_new': new_position})
+    c.execute('UPDATE todos SET position = :new_position WHERE position = :old_position',
+              {'old_position': old_position, 'new_position': new_position})
     if commit:
         conn.commit()
 
 
-def update_todo(position: int, task: str, category: str):
+def update_todo(position: int, task: str = None, category: str = None, priority: str = None, deadline: str = None):
     with conn:
-        if task is not None and category is not None:
-            c.execute('UPDATE todos SET task = :task, category = :category WHERE position = :position',
-                      {'position': position, 'task': task, 'category': category})
-        elif task is not None:
-            c.execute('UPDATE todos SET task = :task WHERE position = :position',
-                      {'position': position, 'task': task})
-        elif category is not None:
-            c.execute('UPDATE todos SET category = :category WHERE position = :position',
-                      {'position': position, 'category': category})
+        if task:
+            c.execute('UPDATE todos SET task = :task WHERE position = :position', {'task': task, 'position': position})
+        if category:
+            c.execute('UPDATE todos SET category = :category WHERE position = :position', {'category': category, 'position': position})
+        if priority:
+            c.execute('UPDATE todos SET priority = :priority WHERE position = :position', {'priority': priority, 'position': position})
+        if deadline:
+            c.execute('UPDATE todos SET deadline = :deadline WHERE position = :position', {'deadline': deadline, 'position': position})
 
 
 def complete_todo(position: int):
     with conn:
         c.execute('UPDATE todos SET status = 2, date_completed = :date_completed WHERE position = :position',
                   {'position': position, 'date_completed': datetime.datetime.now().isoformat()})
+
+
+def clear_completed_todos():
+    with conn:
+        c.execute('DELETE FROM todos WHERE status = 2')
